@@ -113,8 +113,8 @@ def start(delay):
 	# r1Ar = 0
 	print(theta)
 	print(dist)
-	pid_dist = PID(1, 0, 0, setpoint=25)
-	pid_a = PID(0.3, 0, 0, setpoint=0)
+	pid_dist = PID(0.5, 0.001, 0.5, setpoint=30)
+	pid_a = PID(1.2, 0.01, 0.1, setpoint=0)
 	no_llego = True
 	while(True):
 		contrl = pid_dist(dist)
@@ -131,8 +131,8 @@ def start(delay):
 		ctrl_a = pid_a(theta)
 		r1Al = ctrl_a
 		r1Ar = -ctrl_a
-		r1Al = -5 - contrl + ctrl_a
-		r1Ar = -5 - contrl - ctrl_a
+		r1Al = -contrl + ctrl_a
+		r1Ar = -contrl - ctrl_a
 		#Ciclo de programacion
 		print("Angulo: " + str(theta))
 		print("Distancia: " + str(dist))
@@ -330,10 +330,11 @@ while(True):
 		dist = int(math.sqrt(math.pow(xcr_BallColor - xcr_Robot1ColorFront, 2) + math.pow(ycr_BallColor - ycr_Robot1ColorFront, 2)))
 		
 		theta = 0
-		if(am*bm > 0):
+		if(am*bm > 0) and ab/(am*bm)<=1:  ##agregué por error por arcocoseno de 1.0000000000002 no existe.
 			if(d1 < d2):
 				theta = int(math.acos(ab/(am*bm))*180/math.pi)
 			else:
+				# print(ab/(am*bm))
 				theta = -int(math.acos(ab/(am*bm))*180/math.pi)
 		else:
 			theta = 0
