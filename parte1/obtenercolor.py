@@ -12,8 +12,7 @@ def hsv_to_cv(hue, saturation, v):
 
 # Reproducción del video y obtención de fotograma aleatorio
 path = "PerceptionDataset.mp4"
-vid = cv2.VideoCapture(path)
-total_frames = int(vid.get(cv2.CAP_PROP_FRAME_COUNT))
+vid = cv2.VideoCapture(0)
 
 # Función para calcular el promedio de color en el espacio HSV en una región seleccionada
 def get_avg_color_hsv(image, roi):
@@ -25,9 +24,6 @@ def get_avg_color_hsv(image, roi):
     return avg_color
 
 while(True):
-    # Seleccionamos un fotograma aleatorio del video
-    random_frame = random.randint(0, total_frames-1)
-    vid.set(cv2.CAP_PROP_POS_FRAMES, random_frame)
     ret, img = vid.read()
     
     if not ret:

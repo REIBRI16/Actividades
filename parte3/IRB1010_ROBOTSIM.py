@@ -113,7 +113,7 @@ def start(delay):
 	# r1Ar = 0
 	print(theta)
 	print(dist)
-	pid_dist = PID(0.5, 0.001, 0.5, setpoint=30)
+	pid_dist = PID(0.5, 0.001, 0.5, setpoint=32)
 	pid_a = PID(1.2, 0.01, 0.1, setpoint=0)
 	no_llego = True
 	while(True):
@@ -126,7 +126,6 @@ def start(delay):
 			r1Ar = -ctrl_a
 			print("Angulo: " + str(theta))
 			print("Distancia: " + str(dist))
-			time.sleep(0.5)
 		no_llego = False
 		ctrl_a = pid_a(theta)
 		r1Al = ctrl_a
@@ -136,7 +135,6 @@ def start(delay):
 		#Ciclo de programacion
 		print("Angulo: " + str(theta))
 		print("Distancia: " + str(dist))
-		time.sleep(0.5)
 	
 
 cv2.namedWindow('realidad', cv2.WINDOW_AUTOSIZE)
