@@ -12,7 +12,7 @@ def hsv_to_cv(hue, saturation, v):
 
 # Reproducción del video y obtención de fotograma aleatorio
 path = "PerceptionDataset.mp4"
-vid = cv2.VideoCapture(0)
+vid = cv2.VideoCapture(1)
 
 # Función para calcular el promedio de color en el espacio HSV en una región seleccionada
 def get_avg_color_hsv(image, roi):
@@ -44,7 +44,7 @@ while(True):
     cv2.destroyWindow("Seleccionar área de interés")
     
     # Esperamos a que presiones la tecla 'q' para salir del bucle
-    if cv2.waitKey(1) & 0xFF == ord('q'):
+    if cv2.waitKey(1) & 0xFF == 27:
         break
 
 # Cerramos todas las ventanas de OpenCV

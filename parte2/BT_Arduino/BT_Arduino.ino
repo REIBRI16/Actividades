@@ -227,10 +227,10 @@ void loop()
     // Serial.print(motorSpeedIzq);
     // Serial.print(", ");
     // Serial.print(motorSpeedDer);
-    // Serial.print(" Vel0: ");
+    Serial.print(" Vel0: ");
     Serial.print(vel0);
     Serial.print(",");
-    // Serial.print(" Vel1: ");
+    Serial.print(" Vel1: ");
     Serial.println(vel1);
     // Serial.print("\n");
     delay(1);
