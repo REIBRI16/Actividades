@@ -26,7 +26,7 @@ def get_avg_color_hsv(image, roi):
     mean_v = np.mean(v_vals)
     return np.array([mean_h, mean_s, mean_v])
 
-vid = cv2.VideoCapture(0)
+vid = cv2.VideoCapture(1, cv2.CAP_DSHOW)
 if not vid.isOpened():
     print("No se pudo abrir la cámara.")
     exit(1)
@@ -36,7 +36,7 @@ while True:
     if not ret:
         break
 
-    img = cv2.resize(img, (700, 600))
+    #img = cv2.resize(img, (700, 600))
     cv2.imshow('Video', img)
     if cv2.waitKey(1) & 0xFF == 27:
         print("Programa detenido por usuario.")

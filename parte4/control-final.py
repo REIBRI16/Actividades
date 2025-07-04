@@ -7,16 +7,20 @@ from simple_pid import PID
 import threading
 
 accion_actual = None
-
+fin = False
 def input_thread():
-    global accion_actual
-    acciones = ['orientar', 'acercar', 'avanzar', 'orientarcentro', 'acercarcentro', 'None']
-    accion = input("Ingrese acción (orientar/acercar/avanzar/orientarcentro/acercarcentro/None): ").strip()
-    if accion in acciones:
-        accion_actual = accion
-        print(f"→ Acción: {accion_actual}")
-    else:
-        print("Acción invalida")
+    global accion_actual, fin
+    acciones = ["orientar", "acercar", "avanzar", "orientarcentro", "acercarcentro", "None", "fin"]
+    while not fin:
+        accion = input("Ingrese acción (orientar/acercar/avanzar/orientarcentro/acercarcentro/None/fin): ").strip()
+        if accion in acciones:
+            accion_actual = accion
+            print(f"Acción: {accion_actual}")
+            if accion == "fin":
+                enviar_velocidad(0, 0)
+                fin = True
+        else:
+            print("Acción invalida")
 
 def range_to_mask(image, lower_bound, higher_bound):
     image_hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
@@ -59,16 +63,36 @@ def hsv_to_cv(hue, saturation, v):
     vcv = (255/100) * v
     return np.array([huecv, saturationcv, vcv])
 
+def magyang(centro_azul, centro_rojo, centro):
+    vector_direccion = centro_azul - centro_rojo
+    mag_dir = np.linalg.norm(vector_direccion)
+    vector_a_pelota = centro - centro_rojo
+    mag_pelota = np.linalg.norm(vector_a_pelota)
+
+
+    theta = np.arctan2(vector_direccion[1], vector_direccion[0])
+    fi = np.arctan2(vector_a_pelota[1], vector_a_pelota[0])
+    angulo = theta - fi
+
+    
+    if (angulo > np.pi):
+        angulo -= 2 * np.pi
+    elif (angulo <= -np.pi):
+        angulo += 2 * np.pi
+    angulo = np.rad2deg(angulo)
+    return (mag_pelota, angulo)
+
 
 ser = serial.Serial("COM7", baudrate=38400, timeout=1)
 velocidad = 0
 
 def enviar_velocidad(rpml, rpmr):
+    time.sleep(0.5)
     velocidad = f"a{int(rpml)}b{int(rpmr)};"
     encoded = velocidad.encode()
     ser.write(encoded)
 
-vid = cv2.VideoCapture(1) 
+vid = cv2.VideoCapture(0, cv2.CAP_DSHOW) 
 
 pid_dist = PID(0.5, 0.001, 0.5, setpoint=32)
 pid_a = PID(1, 0, 0, setpoint=0)
@@ -76,7 +100,7 @@ no_llego = True
 contador = 0
 
 def avanzar():
-    enviar_velocidad(-20, 20)
+    enviar_velocidad(100, 100)
 
 def orientarse(angle):
     ctrl_a = pid_a(angle)
@@ -87,7 +111,7 @@ def orientarse(angle):
 def acercar(dist, angle):
     contrl = pid_dist(dist)
     ctrl_a = pid_a(angle)
-    rpml = - contrl - ctrl_a
+    rpml = contrl - ctrl_a
     rpmr = contrl + ctrl_a
     enviar_velocidad(rpml, rpmr)
 
@@ -95,24 +119,27 @@ threading.Thread(target=input_thread, daemon=True).start()
 while(True):
           
     ret, img = vid.read()
-
-    img_arco_der = img[200:450, 600:700]
-    img_arco_izq = img[200:450, 0:100]
+    height = img.shape[0]
+    width = img.shape[1]
+    centro = np.array([width/2, height/2])
+    arcoizq = np.array([0, height/2])
+    arcoder = np.array([width, height/2])
 
 
     arco_lb = np.array([106, 110, 81])
     arco_ub = np.array([111, 160, 95])
 
-    rojo_lb1 = np.array([0, 120, 100])
-    rojo_ub1 = np.array([10, 255, 255])
-    rojo_lb2 = np.array([170, 120, 100])
-    rojo_ub2 = np.array([179, 255, 255])
+    rojo_lb1 = np.array([174, 180, 129])
+    rojo_ub1 = np.array([177, 198, 144])
 
-    azul_lb = np.array([105, 150, 80])
-    azul_ub = np.array([115, 200, 150])
+    rojo_lb2 = np.array([174, 180, 129])
+    rojo_ub2 = np.array([177, 198, 144])
 
-    pelota_lb = np.array([15, 150, 120])
-    pelota_ub = np.array([25, 200, 200])
+    azul_lb = np.array([105, 163, 123])
+    azul_ub = np.array([108, 184, 136])
+
+    pelota_lb = np.array([20, 199, 175])
+    pelota_ub = np.array([24, 215, 220])
 
 
     img_masked_blue = range_to_mask(img, azul_lb, azul_ub)
@@ -142,31 +169,20 @@ while(True):
     centro_pelota = bb_center(bounding_box_pelota)
 
 
-    vector_direccion = centro_azul - centro_rojo
-    mag_dir = np.linalg.norm(vector_direccion)
-    vector_a_pelota = centro_pelota - centro_rojo
-    mag_pelota = np.linalg.norm(vector_a_pelota)
+    mag_pelota, angulo = magyang(centro_azul, centro_rojo, centro_pelota)
+    distancia_centro, angulo_centro = magyang(centro_azul, centro_rojo, centro)
 
-
-    theta = np.arctan2(vector_direccion[1], vector_direccion[0])
-    fi = np.arctan2(vector_a_pelota[1], vector_a_pelota[0])
-    angulo = theta - fi
-
-    
-    if (angulo > np.pi):
-        angulo -= 2 * np.pi
-    elif (angulo <= -np.pi):
-        angulo += 2 * np.pi
-    angulo = np.rad2deg(angulo)
-
-    print(f"Distancia(px) y angulo(deg) : {round(mag_pelota, 3)},  {round(angulo, 3)}")
+    #print(f"Distancia(px) y angulo(deg) : {round(mag_pelota, 3)},  {round(angulo, 3)}")
 
     graph_vector(img, img_masked, centro_pelota, centro_rojo)
+    graph_vector(img, img_masked, arcoizq, centro_rojo)
+    graph_vector(img, img_masked, arcoder, centro_rojo)
+    graph_vector(img, img_masked, centro, centro_rojo)
     graph_vector(img, img_masked, centro_rojo, centro_azul)
 
 
-    cv2.imshow("recorte", img_arco_izq)
-    cv2.imshow("recorte2", img_arco_der)
+    #cv2.imshow("recorte", img_arco_izq)
+    #cv2.imshow("recorte2", img_arco_der)
     cv2.imshow("mask", img_masked)
     cv2.imshow('original', img)
     contador += 1
