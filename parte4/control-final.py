@@ -4,6 +4,19 @@ from PIL import Image
 import time
 import serial
 from simple_pid import PID
+import threading
+
+accion_actual = None
+
+def input_thread():
+    global accion_actual
+    acciones = ['orientar', 'acercar', 'avanzar', 'orientarcentro', 'acercarcentro', 'None']
+    accion = input("Ingrese acción (orientar/acercar/avanzar/orientarcentro/acercarcentro/None): ").strip()
+    if accion in acciones:
+        accion_actual = accion
+        print(f"→ Acción: {accion_actual}")
+    else:
+        print("Acción invalida")
 
 def range_to_mask(image, lower_bound, higher_bound):
     image_hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
@@ -50,10 +63,11 @@ def hsv_to_cv(hue, saturation, v):
 ser = serial.Serial("COM7", baudrate=38400, timeout=1)
 velocidad = 0
 
-#path1 = "gameExample_1.png"
-# path1 = "capturavideo.png"
-# path2 = "PerceptionDataset.mp4"
-# vid = cv2.VideoCapture(path2)
+def enviar_velocidad(rpml, rpmr):
+    velocidad = f"a{int(rpml)}b{int(rpmr)};"
+    encoded = velocidad.encode()
+    ser.write(encoded)
+
 vid = cv2.VideoCapture(1) 
 
 pid_dist = PID(0.5, 0.001, 0.5, setpoint=32)
@@ -61,15 +75,29 @@ pid_a = PID(1, 0, 0, setpoint=0)
 no_llego = True
 contador = 0
 
+def avanzar():
+    enviar_velocidad(-20, 20)
+
+def orientarse(angle):
+    ctrl_a = pid_a(angle)
+    rpml = -ctrl_a
+    rpmr = ctrl_a
+    enviar_velocidad(rpml, rpmr)
+
+def acercar(dist, angle):
+    contrl = pid_dist(dist)
+    ctrl_a = pid_a(angle)
+    rpml = - contrl - ctrl_a
+    rpmr = contrl + ctrl_a
+    enviar_velocidad(rpml, rpmr)
+
+threading.Thread(target=input_thread, daemon=True).start()
 while(True):
           
     ret, img = vid.read()
-    # img = cv2.resize(img, (700, 600))
-    #img = cv2.imread(path1)
 
     img_arco_der = img[200:450, 600:700]
     img_arco_izq = img[200:450, 0:100]
-
 
 
     arco_lb = np.array([106, 110, 81])
@@ -80,20 +108,11 @@ while(True):
     rojo_lb2 = np.array([170, 120, 100])
     rojo_ub2 = np.array([179, 255, 255])
 
-    # rojo_lb = np.array([0, 120, 100])
-    # rojo_ub = np.array([10, 255, 200])
-
-    # verde_lb = np.array([0, 120, 100])
-    # verde_ub = np.array([10, 255, 200])
-
-
     azul_lb = np.array([105, 150, 80])
     azul_ub = np.array([115, 200, 150])
 
     pelota_lb = np.array([15, 150, 120])
     pelota_ub = np.array([25, 200, 200])
-
-
 
 
     img_masked_blue = range_to_mask(img, azul_lb, azul_ub)
@@ -112,18 +131,22 @@ while(True):
     bounding_box_pelota = range_to_bb(img, pelota_lb, pelota_ub)
     bounding_box_arco = range_to_bb(img, arco_lb, arco_ub)
 
+
     graph_bb(img, img_masked, bounding_box_blue, "azul")
     graph_bb(img, img_masked, bounding_box_red, "rojo")
     graph_bb(img, img_masked, bounding_box_pelota, "pelota")
+
 
     centro_azul = bb_center(bounding_box_blue)
     centro_rojo = bb_center(bounding_box_red)
     centro_pelota = bb_center(bounding_box_pelota)
 
+
     vector_direccion = centro_azul - centro_rojo
     mag_dir = np.linalg.norm(vector_direccion)
     vector_a_pelota = centro_pelota - centro_rojo
     mag_pelota = np.linalg.norm(vector_a_pelota)
+
 
     theta = np.arctan2(vector_direccion[1], vector_direccion[0])
     fi = np.arctan2(vector_a_pelota[1], vector_a_pelota[0])
@@ -135,7 +158,6 @@ while(True):
     elif (angulo <= -np.pi):
         angulo += 2 * np.pi
     angulo = np.rad2deg(angulo)
-    #print(f"{angulo} ------ {round(np.rad2deg(theta),1)} --------------{round(np.rad2deg(fi), 1)}")
 
     print(f"Distancia(px) y angulo(deg) : {round(mag_pelota, 3)},  {round(angulo, 3)}")
 
@@ -143,40 +165,45 @@ while(True):
     graph_vector(img, img_masked, centro_rojo, centro_azul)
 
 
-    # cv2.imshow("recorte", img_arco_izq)
-    # cv2.imshow("recorte2", img_arco_der)
+    cv2.imshow("recorte", img_arco_izq)
+    cv2.imshow("recorte2", img_arco_der)
     cv2.imshow("mask", img_masked)
     cv2.imshow('original', img)
     contador += 1
     
-    contrl = pid_dist(mag_pelota)
-    if abs(angulo)> 0 and no_llego and contador>=100:
+    if accion_actual == "None":
+        enviar_velocidad(0, 0)
+    if accion_actual == "orientar":
+        orientarse(angulo)
+    if accion_actual == "acercar":
+        acercar(mag_pelota, angulo)
+    if accion_actual == "avanzar":
+        avanzar()
+    if accion_actual == "orientarcentro":
+        orientarse(angulo_centro)
+    if accion_actual == "acercarcentro":
+        acercar(distancia_centro, angulo_centro)
 
-        ctrl_a = pid_a(angulo)
-        rpml = -ctrl_a
-        rpmr = ctrl_a
-        velocidad = f"a{int(rpml)}b{int(rpmr)};"
-        encoded = velocidad.encode()
-        ser.write(encoded)
-        print(f"AnguloNO: {velocidad}")
-    # elif contador >=100:
-    #     velocidad = f"a{0}b{0};"
+    # contrl = pid_dist(mag_pelota)
+    # if abs(angulo)> 0 and no_llego and contador>=100:
+
+    #     ctrl_a = pid_a(angulo)
+    #     rpml = -ctrl_a
+    #     rpmr = ctrl_a
+
+    #     velocidad = f"a{int(rpml)}b{int(rpmr)};"
     #     encoded = velocidad.encode()
     #     ser.write(encoded)
-    #     print(f"AnguloSI: {velocidad}")
 
-    elif contador >= 100:
-        no_llego = False
-        ctrl_a = pid_a(angulo)
-        rpml = -ctrl_a
-        rpmr = ctrl_a
-        rpml = contrl - ctrl_a
-        rpmr = contrl + ctrl_a
+    # elif contador >= 100:
+    #     no_llego = False
+    #     ctrl_a = pid_a(angulo)
+    #     rpml = contrl - ctrl_a
+    #     rpmr = contrl + ctrl_a
 
-        velocidad = f"a{int(rpml)}b{int(rpmr)};"
-        encoded = velocidad.encode()
-        ser.write(encoded)
-        print(f"ANGULOSI: {velocidad}")
+    #     velocidad = f"a{int(rpml)}b{int(rpmr)};"
+    #     encoded = velocidad.encode()
+    #     ser.write(encoded)
 
     if cv2.waitKey(1) & 0xFF == 27:
         velocidad = f"a{0}b{0};"

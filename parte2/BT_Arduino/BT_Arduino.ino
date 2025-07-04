@@ -190,7 +190,7 @@ void loop()
 
     // El controlador PID en voltaje en el tiempo k
     c_motor0 = c_t1_motor0 + k0_motor0 * error_actual_motor0 + k1_motor0 * error_t1_motor0 + k2_motor0 * error_t2_motor0;
-    c_motor1 = c_t1_motor1 + k0_motor1 * error_actual_motor1 + k1_motor1 * error_t1_motor1 + k2_motor0 * error_t2_motor1;
+    c_motor1 = c_t1_motor1 + k0_motor1 * error_actual_motor1 + k1_motor1 * error_t1_motor1 + k2_motor1 * error_t2_motor1;
 
     //Error en tiempo k - 2 para motor 0 y 1
     error_t2_motor0 = error_t1_motor0;
