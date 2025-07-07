@@ -9,12 +9,15 @@ import threading
 accion_actual = None
 fin = False
 def input_thread():
-    global accion_actual, fin
-    acciones = ["orientar", "acercar", "avanzar", "orientarcentro", "acercarcentro", "None", "fin"]
+    global accion_actual, fin, first
+    acciones = ["orientar", "acercar", "avanzar", "orientarcentro", "acercarcentro", "None", "fin", "golpe", "arco"]
     while not fin:
-        accion = input("Ingrese acción (orientar/acercar/avanzar/orientarcentro/acercarcentro/None/fin): ").strip()
+        accion = input("Ingrese acción (orientar/acercar/avanzar/orientarcentro/acercarcentro/None/fin/golpe/arco): ").strip()
         if accion in acciones:
+            accion_anterior = accion_actual
             accion_actual = accion
+            if accion_anterior != accion_actual:
+                first = True
             print(f"Acción: {accion_actual}")
             if accion == "fin":
                 enviar_velocidad(0, 0)
@@ -171,6 +174,7 @@ while(True):
 
     mag_pelota, angulo = magyang(centro_azul, centro_rojo, centro_pelota)
     distancia_centro, angulo_centro = magyang(centro_azul, centro_rojo, centro)
+    distancia_arco, angulo_arco = magyang(centro_azul, centro_rojo, arcoizq)
 
     #print(f"Distancia(px) y angulo(deg) : {round(mag_pelota, 3)},  {round(angulo, 3)}")
 
@@ -187,18 +191,72 @@ while(True):
     cv2.imshow('original', img)
     contador += 1
     
+    if np.abs(angulo) >= 10:
+        angulobien = False
+    else:
+        angulobien = True
+    
+    if np.abs(angulo_centro) >= 10:
+        angulocentrobien = False
+    else:
+        angulocentrobien = True
+
+    if np.abs(angulo_arco) >= 10:
+        anguloarcobien = False
+    else:
+        anguloarcobien = True
+
+    
     if accion_actual == "None":
         enviar_velocidad(0, 0)
     if accion_actual == "orientar":
         orientarse(angulo)
     if accion_actual == "acercar":
-        acercar(mag_pelota, angulo)
+        if angulobien:
+            if mag_pelota > 20:
+                acercar(mag_pelota, angulo)
+            else:
+                orientarse(angulo)
+        else:
+            orientarse(angulo)
     if accion_actual == "avanzar":
         avanzar()
     if accion_actual == "orientarcentro":
         orientarse(angulo_centro)
     if accion_actual == "acercarcentro":
-        acercar(distancia_centro, angulo_centro)
+        if angulocentrobien:
+            if distancia_centro > 20:
+                acercar(distancia_centro, angulo_centro)
+            else:
+                orientarse(angulo_centro)
+        else:
+            orientarse(angulo_centro)
+    if accion_actual == "golpe":
+        while first:
+            if angulobien:
+                if mag_pelota > 10:
+                    acercar(mag_pelota, angulo)
+                else:
+                    first = False
+                    orientarse(angulo)
+            else:
+                orientarse(angulo)
+    if accion_actual == "arco":
+        if angulobien:
+            if mag_pelota > 10:
+                acercar(mag_pelota, angulo)
+            else:
+                if anguloarcobien:
+                    if distancia_arco > 20:
+                        acercar(distancia_arco, angulo_arco)
+                    else:
+                        orientarse(angulo_arco)
+                else:
+                    orientarse(angulo)
+        else:
+            orientarse(angulo)
+
+
 
     # contrl = pid_dist(mag_pelota)
     # if abs(angulo)> 0 and no_llego and contador>=100:
