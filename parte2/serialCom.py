@@ -6,8 +6,8 @@ import serial
 
 message_example = "a100b50;"
 message = input("Ingresa una velocidad(rpm): ")
-ser = serial.Serial("COM7", baudrate=38400, timeout=1)
-time.sleep(5)
+ser = serial.Serial("COM8", baudrate=38400, timeout=1)
+time.sleep(1)
 
 not_salir = True
 

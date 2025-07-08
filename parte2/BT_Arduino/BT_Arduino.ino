@@ -233,7 +233,6 @@ void loop()
     Serial.print(" Vel1: ");
     Serial.println(vel1);
     // Serial.print("\n");
-    delay(1);
 }
 
 String readBluetoothMessage() {

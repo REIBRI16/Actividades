@@ -86,24 +86,24 @@ def magyang(centro_azul, centro_rojo, centro):
     return (mag_pelota, angulo)
 
 
-ser = serial.Serial("COM7", baudrate=38400, timeout=1)
+ser = serial.Serial("COM8", baudrate=38400, timeout=1)
 velocidad = 0
 
 def enviar_velocidad(rpml, rpmr):
-    time.sleep(0.5)
+    time.sleep(0.25)
     velocidad = f"a{int(rpml)}b{int(rpmr)};"
     encoded = velocidad.encode()
     ser.write(encoded)
 
-vid = cv2.VideoCapture(0, cv2.CAP_DSHOW) 
+vid = cv2.VideoCapture(1, cv2.CAP_DSHOW) 
 
-pid_dist = PID(0.5, 0.001, 0.5, setpoint=32)
-pid_a = PID(1, 0, 0, setpoint=0)
+pid_dist = PID(0.5, 0.0001, 0.05, setpoint=25)
+pid_a = PID(0.5, 0, 0, setpoint=0)
 no_llego = True
 contador = 0
 
 def avanzar():
-    enviar_velocidad(100, 100)
+    enviar_velocidad(50, 50)
 
 def orientarse(angle):
     ctrl_a = pid_a(angle)
@@ -213,19 +213,19 @@ while(True):
         orientarse(angulo)
     if accion_actual == "acercar":
         if angulobien:
-            if mag_pelota > 20:
+            if mag_pelota > 100:
                 acercar(mag_pelota, angulo)
             else:
                 orientarse(angulo)
         else:
             orientarse(angulo)
     if accion_actual == "avanzar":
-        avanzar()
+        enviar_velocidad(50, 50)
     if accion_actual == "orientarcentro":
         orientarse(angulo_centro)
     if accion_actual == "acercarcentro":
         if angulocentrobien:
-            if distancia_centro > 20:
+            if distancia_centro > 50:
                 acercar(distancia_centro, angulo_centro)
             else:
                 orientarse(angulo_centro)
@@ -234,7 +234,7 @@ while(True):
     if accion_actual == "golpe":
         while first:
             if angulobien:
-                if mag_pelota > 10:
+                if mag_pelota > 15:
                     acercar(mag_pelota, angulo)
                 else:
                     first = False
@@ -243,7 +243,7 @@ while(True):
                 orientarse(angulo)
     if accion_actual == "arco":
         if angulobien:
-            if mag_pelota > 10:
+            if mag_pelota > 15:
                 acercar(mag_pelota, angulo)
             else:
                 if anguloarcobien:
